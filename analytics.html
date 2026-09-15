@@ -118,7 +118,7 @@
 </div>
 
 <script>
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 const TASKS_SHEET = 'Tasks';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -132,20 +132,35 @@ let allTasks = [];
 let weekOffset = 0;
 let tokenClient;
 
+function saveToken(resp) {
+  accessToken = resp.access_token;
+  const expiresAt = Date.now() + (resp.expires_in || 3600) * 1000;
+  localStorage.setItem('gToken', accessToken);
+  localStorage.setItem('gTokenExpiresAt', String(expiresAt));
+}
+function clearToken() {
+  localStorage.removeItem('gToken');
+  localStorage.removeItem('gTokenExpiresAt');
+}
+function hasValidStoredToken() {
+  const saved = localStorage.getItem('gToken');
+  const expiresAt = parseInt(localStorage.getItem('gTokenExpiresAt') || '0', 10);
+  return saved && Date.now() < expiresAt ? saved : null;
+}
+
 window.onload = function () {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
     callback: (resp) => {
       if (resp.error) { document.getElementById('signinError').textContent = 'Ошибка входа: ' + resp.error; return; }
-      accessToken = resp.access_token;
-      sessionStorage.setItem('gToken', accessToken);
+      saveToken(resp);
       showApp();
     },
   });
 
-  const saved = sessionStorage.getItem('gToken');
-  if (saved) { accessToken = saved; showApp(); }
+  const saved = hasValidStoredToken();
+  if (saved) { accessToken = saved; showApp(); } else { clearToken(); }
 };
 
 function signIn() { tokenClient.requestAccessToken(); }
@@ -182,7 +197,7 @@ async function load() {
     render();
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('UNAUTHENTICATED')) {
-      sessionStorage.removeItem('gToken');
+      clearToken();
       document.getElementById('signinScreen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
       document.getElementById('signinError').textContent = 'Сессия истекла — войдите заново.';

@@ -246,7 +246,7 @@
 
 <script>
 /* ================== настройки — поменяй под свою таблицу =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -277,6 +277,24 @@ let columnVisible = {};
 /* ---------------- Google Sign-In ---------------- */
 let tokenClient;
 
+function saveToken(resp) {
+  accessToken = resp.access_token;
+  const expiresAt = Date.now() + (resp.expires_in || 3600) * 1000;
+  localStorage.setItem('gToken', accessToken);
+  localStorage.setItem('gTokenExpiresAt', String(expiresAt));
+}
+
+function clearToken() {
+  localStorage.removeItem('gToken');
+  localStorage.removeItem('gTokenExpiresAt');
+}
+
+function hasValidStoredToken() {
+  const saved = localStorage.getItem('gToken');
+  const expiresAt = parseInt(localStorage.getItem('gTokenExpiresAt') || '0', 10);
+  return saved && Date.now() < expiresAt ? saved : null;
+}
+
 window.onload = function () {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
@@ -286,21 +304,22 @@ window.onload = function () {
         document.getElementById('signinError').textContent = 'Ошибка входа: ' + resp.error;
         return;
       }
-      accessToken = resp.access_token;
-      sessionStorage.setItem('gToken', accessToken); // чтобы не логиниться заново при переходе в Аналитику
+      saveToken(resp);
       document.getElementById('signinScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       boot();
     },
   });
 
-  // если токен уже есть в этой сессии (например, вернулись со страницы аналитики) — не спрашиваем логин заново
-  const savedToken = sessionStorage.getItem('gToken');
+  // токен переживает закрытие приложения (localStorage), но не дольше ~часа — это ограничение самого токена
+  const savedToken = hasValidStoredToken();
   if (savedToken) {
     accessToken = savedToken;
     document.getElementById('signinScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    boot(); // если токен протух, boot() сам откатит на экран входа
+    boot(); // если токен всё же отклонён сервером — boot() откатит на экран входа
+  } else {
+    clearToken();
   }
 };
 
@@ -409,7 +428,7 @@ async function boot() {
     setSyncStatus('🟢 Загружено', 'done');
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('UNAUTHENTICATED')) {
-      sessionStorage.removeItem('gToken');
+      clearToken();
       document.getElementById('signinScreen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
       document.getElementById('signinError').textContent = 'Сессия истекла — войдите заново.';
