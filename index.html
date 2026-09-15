@@ -128,6 +128,7 @@
       <span id="syncStatus" class="sync-indicator"></span>
       <div class="header-actions">
         <button class="secondary small" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
+        <button class="secondary small" onclick="location.href='analytics.html'">📊</button>
         <button class="secondary small" onclick="openTagsModal()">Теги</button>
       </div>
     </div>
@@ -244,7 +245,7 @@
 
 <script>
 /* ================== настройки — поменяй под свою таблицу =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -285,11 +286,21 @@ window.onload = function () {
         return;
       }
       accessToken = resp.access_token;
+      sessionStorage.setItem('gToken', accessToken); // чтобы не логиниться заново при переходе в Аналитику
       document.getElementById('signinScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       boot();
     },
   });
+
+  // если токен уже есть в этой сессии (например, вернулись со страницы аналитики) — не спрашиваем логин заново
+  const savedToken = sessionStorage.getItem('gToken');
+  if (savedToken) {
+    accessToken = savedToken;
+    document.getElementById('signinScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    boot(); // если токен протух, boot() сам откатит на экран входа
+  }
 };
 
 function signIn() {
@@ -396,6 +407,13 @@ async function boot() {
     await reload();
     setSyncStatus('🟢 Загружено', 'done');
   } catch (e) {
+    if (e.message.includes('401') || e.message.includes('UNAUTHENTICATED')) {
+      sessionStorage.removeItem('gToken');
+      document.getElementById('signinScreen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+      document.getElementById('signinError').textContent = 'Сессия истекла — войдите заново.';
+      return;
+    }
     setSyncStatus('🔴 Ошибка: ' + e.message, 'blocked');
   }
 }
