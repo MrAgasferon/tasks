@@ -4,10 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#1b1e24">
-<title>Трекер · АР ВЭД</title>
+<title>Планирование · Трекер</title>
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
 <style>
   :root {
     --bg: #1b1e24; --panel: #22262e; --card-bg: #282d36; --surface-2: #1e2229;
@@ -32,34 +31,25 @@
   header { padding: 12px 14px; border-bottom: 1px solid var(--line); }
   .header-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   header h1 { font-size: 16px; font-weight: 700; margin: 0; color: var(--accent); }
-  .sync-indicator { font-size: 10px; color: var(--muted); }
-  .header-actions { display: flex; gap: 6px; }
-
-  details.filters-panel { margin-top: 10px; }
-  details.filters-panel summary { font-size: 12px; color: var(--accent); cursor: pointer; list-style: none; }
-  details.filters-panel summary::-webkit-details-marker { display: none; }
-  .filters-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .filters-grid select, .filters-grid input { font-size: 12px; padding: 6px 8px; flex: 1; min-width: 110px; }
+  a.back { color: var(--muted); text-decoration: none; font-size: 12px; }
+  .week-nav { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .week-nav button { font-size: 12px; padding: 6px 10px; }
+  #weekLabel { font-size: 12px; color: var(--muted); }
 
   .tabs { display: flex; overflow-x: auto; gap: 6px; padding: 10px 14px 0; -webkit-overflow-scrolling: touch; scrollbar-width: none; -ms-overflow-style: none; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab { flex-shrink: 0; padding: 7px 12px; border-radius: 20px; background: var(--panel); border: 1px solid var(--line); font-size: 12px; color: var(--muted); white-space: nowrap; cursor: pointer; }
   .tab.active { background: var(--accent); color: #1b1e24; border-color: var(--accent); font-weight: 600; }
+  .tab.today { border-color: var(--accent); }
   .tab .count { opacity: 0.75; margin-left: 4px; }
 
-  .sort-row { display: flex; justify-content: flex-end; padding: 10px 14px 0; }
-  .sort-row select { font-size: 12px; padding: 6px 8px; }
-
-  main { padding: 10px 14px 20px; }
+  main { padding: 14px; }
   .card { background: var(--card-bg); border: 1px solid var(--line); border-left: 3px solid var(--notstarted); border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
   .card-head { display: flex; justify-content: space-between; align-items: center; padding: 5px 12px; font-size: 10px; font-weight: 700; color: #1b1e24; }
   .card-body { padding: 10px 12px 12px; }
   .card-body .task-title { font-size: 14.5px; line-height: 1.4; margin-bottom: 8px; }
   .card-body .meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 11px; }
   .tag { padding: 2px 8px; border-radius: 5px; color: #1b1e24; font-weight: 600; }
-  .tag.due { color: var(--accent); background: transparent; border: 1px solid var(--accent); font-weight: 400; }
-  .col-more { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
-  .col-more button { width: 100%; }
   .empty-note { color: var(--muted); font-size: 13px; padding: 20px 0; text-align: center; }
 
   .fab { position: fixed; right: 18px; bottom: 22px; width: 56px; height: 56px; border-radius: 50%;
@@ -98,13 +88,6 @@
   .notes-check-row input { margin-top: 2px; width: auto; padding: 0; }
   .notes-check-row .struck { text-decoration: line-through; opacity: 0.55; }
 
-  .tags-modal-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 16px; }
-  .tags-modal-chip { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 6px; font-size: 12px; color: #1b1e24; font-weight: 600; }
-  .tags-modal-chip .x { cursor: pointer; opacity: 0.6; font-weight: 700; }
-  .tags-modal-add { display: flex; gap: 6px; margin-bottom: 4px; }
-  .tags-modal-add input { flex: 1; }
-  .tags-section-title { font-size: 12px; color: var(--muted); margin: 14px 0 4px; text-transform: uppercase; letter-spacing: .03em; }
-
   .signin-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; gap: 16px; padding: 0 24px; text-align: center; }
   .signin-screen h1 { color: var(--accent); font-size: 20px; margin: 0; }
   .signin-screen p { color: var(--muted); font-size: 13px; margin: 0; }
@@ -116,45 +99,32 @@
 <body>
 
 <div id="signinScreen" class="signin-screen">
-  <h1>Трекер · АР ВЭД</h1>
+  <h1>Планирование</h1>
   <p>Вход тем же Google-аккаунтом, которым создана таблица.</p>
   <button id="signinBtn" onclick="signIn()">Войти через Google</button>
-  <p id="signinError" style="color:var(--blocked)"></p>
+  <p id="signinError" style="color:#c25b52"></p>
 </div>
 
 <div id="app" style="display:none">
   <header>
     <div class="header-top">
-      <h1>Трекер</h1>
-      <span id="syncStatus" class="sync-indicator"></span>
-      <div class="header-actions">
-        <button class="secondary small" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
-        <button class="secondary small" onclick="location.href='planning.html'">📅</button>
-        <button class="secondary small" onclick="location.href='analytics.html'">📊</button>
-        <button class="secondary small" onclick="openTagsModal()">Теги</button>
+      <div>
+        <a class="back" href="index.html">← К доске</a>
+        <h1>Планирование</h1>
       </div>
+      <button class="secondary" id="themeToggleBtn" onclick="toggleTheme()">☀️</button>
     </div>
-    <details class="filters-panel">
-      <summary>Фильтры</summary>
-      <div class="filters-grid">
-        <select id="filterProcess"><option value="">Все процессы</option></select>
-        <select id="filterProject"><option value="">Все проекты</option></select>
-        <select id="filterType"><option value="">Все приоритеты</option></select>
-        <input id="filterSearch" placeholder="Поиск…">
-        <input type="date" id="filterRelevant">
-        <button class="secondary small" onclick="clearRelevantFilter()">Сбросить дату</button>
-      </div>
-    </details>
+    <div class="week-nav">
+      <button class="secondary" onclick="changeWeek(-1)">◀</button>
+      <span id="weekLabel"></span>
+      <button class="secondary" onclick="changeWeek(1)">▶</button>
+      <button class="secondary" onclick="changeWeek(0)">Эта неделя</button>
+    </div>
   </header>
 
   <div class="tabs" id="tabs"></div>
-  <div class="sort-row">
-    <select id="sortSelect" onchange="setCurrentSort(this.value)"></select>
-  </div>
-
   <main id="cardsList"></main>
-
-  <button class="fab" onclick="openModal()">+</button>
+  <button class="fab" onclick="openModal(null)">+</button>
 </div>
 
 <!-- модалка карточки -->
@@ -225,28 +195,8 @@
   </div>
 </div>
 
-<!-- модалка справочника тегов -->
-<div class="modal-bg" id="tagsModalBg">
-  <div class="modal">
-    <h2>Справочник тегов</h2>
-    <div class="tags-section-title">Процесс</div>
-    <div class="tags-modal-add">
-      <input id="newTagProcess" placeholder="Новый процесс…">
-      <button class="small" onclick="addTagFromModal('Проект', 'newTagProcess')">Добавить</button>
-    </div>
-    <div class="tags-modal-list" id="tagsListProcess"></div>
-    <div class="tags-section-title">Проект</div>
-    <div class="tags-modal-add">
-      <input id="newTagSubprocess" placeholder="Новый проект…">
-      <button class="small" onclick="addTagFromModal('Подпроект', 'newTagSubprocess')">Добавить</button>
-    </div>
-    <div class="tags-modal-list" id="tagsListSubprocess"></div>
-    <div class="modal-actions"><div></div><button class="secondary" onclick="closeTagsModal()">Закрыть</button></div>
-  </div>
-</div>
-
 <script>
-/* ================== настройки — поменяй под свою таблицу =================== */
+/* ================== настройки — те же, что в index.html =================== */
 const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
@@ -254,95 +204,69 @@ const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 const TASKS_SHEET = 'Tasks';
 const TAGS_SHEET = 'Tags';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
-
 const COLUMNS = ['id', 'Задача', 'Статус', 'Проект', 'Подпроект', 'Приоритет',
                  'Дата закрытия', 'Создано', 'Примечания', '№ заявки', 'Актуально'];
 const STATUSES = ['Бэклог', 'Не начато', 'Выполняется', 'На паузе', 'Заблокировано', 'Выполнено'];
 const CLOSING_STATUSES = new Set(['Выполнено', 'Заблокировано']);
-const PRIORITIES = ['Критично', 'Высокий', 'Средний', 'Низкий'];
 const PRIORITY_COLORS = { 'Критично': '#c25b52', 'Высокий': '#d68a2b', 'Средний': '#3f7fbf', 'Низкий': '#6b7078' };
-const PAGE_SIZE = 25;
+const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 let accessToken = null;
 let tasksSheetId = null;
 let tagsSheetId = null;
-
 let tasks = [];
 let tags = { 'Проект': [], 'Подпроект': [] };
 let selectedTags = { 'Проект': [], 'Подпроект': [] };
-let editingRow = null; // номер строки в листе редактируемой задачи (null для новой)
-let currentTab = 'Не начато';
-let columnSort = {};
-let columnVisible = {};
+let editingRow = null;
+let newTaskDefaultDate = null;
+let weekOffset = 0;
+let currentDayIndex = null; // 0..6, индекс выбранного дня в текущей неделе
 
-/* ---------------- Google Sign-In ---------------- */
+/* ---------------- Google Sign-In (тот же токен, что и в index.html) ---------------- */
 let tokenClient;
-
 function saveToken(resp) {
   accessToken = resp.access_token;
   const expiresAt = Date.now() + (resp.expires_in || 3600) * 1000;
   localStorage.setItem('gToken', accessToken);
   localStorage.setItem('gTokenExpiresAt', String(expiresAt));
 }
-
-function clearToken() {
-  localStorage.removeItem('gToken');
-  localStorage.removeItem('gTokenExpiresAt');
-}
-
+function clearToken() { localStorage.removeItem('gToken'); localStorage.removeItem('gTokenExpiresAt'); }
 function hasValidStoredToken() {
   const saved = localStorage.getItem('gToken');
   const expiresAt = parseInt(localStorage.getItem('gTokenExpiresAt') || '0', 10);
   return saved && Date.now() < expiresAt ? saved : null;
 }
-
 window.onload = function () {
   tokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: CLIENT_ID,
-    scope: SCOPES,
+    client_id: CLIENT_ID, scope: SCOPES,
     callback: (resp) => {
-      if (resp.error) {
-        document.getElementById('signinError').textContent = 'Ошибка входа: ' + resp.error;
-        return;
-      }
+      if (resp.error) { document.getElementById('signinError').textContent = 'Ошибка входа: ' + resp.error; return; }
       saveToken(resp);
       document.getElementById('signinScreen').style.display = 'none';
       document.getElementById('app').style.display = 'block';
       boot();
     },
   });
-
-  // токен переживает закрытие приложения (localStorage), но не дольше ~часа — это ограничение самого токена
-  const savedToken = hasValidStoredToken();
-  if (savedToken) {
-    accessToken = savedToken;
+  const saved = hasValidStoredToken();
+  if (saved) {
+    accessToken = saved;
     document.getElementById('signinScreen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
-    boot(); // если токен всё же отклонён сервером — boot() откатит на экран входа
-  } else {
-    clearToken();
-  }
+    boot();
+  } else { clearToken(); }
 };
+function signIn() { tokenClient.requestAccessToken(); }
 
-function signIn() {
-  tokenClient.requestAccessToken();
-}
-
-/* ---------------- обёртка над Sheets API ---------------- */
+/* ---------------- Sheets API ---------------- */
 function apiBase() { return `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`; }
-
 async function sheetsFetch(path, options = {}) {
   const res = await fetch(apiBase() + path, {
     ...options,
     headers: { ...(options.headers || {}), 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Sheets API ${res.status}: ${text}`);
-  }
+  if (!res.ok) { const text = await res.text(); throw new Error(`Sheets API ${res.status}: ${text}`); }
   return res.json();
 }
-
 async function ensureSheetIds() {
   const meta = await sheetsFetch('?fields=sheets.properties');
   for (const s of meta.sheets) {
@@ -350,57 +274,27 @@ async function ensureSheetIds() {
     if (s.properties.title === TAGS_SHEET) tagsSheetId = s.properties.sheetId;
   }
   if (tagsSheetId === undefined || tagsSheetId === null) {
-    const res = await sheetsFetch(':batchUpdate', {
-      method: 'POST',
-      body: JSON.stringify({ requests: [{ addSheet: { properties: { title: TAGS_SHEET } } }] }),
-    });
+    const res = await sheetsFetch(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: [{ addSheet: { properties: { title: TAGS_SHEET } } }] }) });
     tagsSheetId = res.replies[0].addSheet.properties.sheetId;
-    await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, {
-      method: 'PUT', body: JSON.stringify({ values: [['Категория', 'Значение']] }),
-    });
+    await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [['Категория', 'Значение']] }) });
   }
 }
-
 async function fetchAllTasks() {
-  const range = `${TASKS_SHEET}!A2:K100000`;
-  const data = await sheetsFetch(`/values/${encodeURIComponent(range)}`);
+  const data = await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A2:K100000')}`);
   const rows = data.values || [];
-  return rows
-    .map((row, i) => ({ row, rowIndex: i + 2 }))
-    .filter(({ row }) => row[0] && row[0].trim())
-    .map(({ row, rowIndex }) => {
-      const task = {};
-      COLUMNS.forEach((c, idx) => (task[c] = row[idx] || ''));
-      task._row = rowIndex;
-      return task;
-    });
+  return rows.map((row, i) => ({ row, rowIndex: i + 2 })).filter(({ row }) => row[0] && row[0].trim())
+    .map(({ row, rowIndex }) => { const task = {}; COLUMNS.forEach((c, idx) => (task[c] = row[idx] || '')); task._row = rowIndex; return task; });
 }
-
 async function updateTaskRow(task) {
   const range = `${TASKS_SHEET}!A${task._row}:K${task._row}`;
-  const values = [COLUMNS.map((c) => task[c] || '')];
-  await sheetsFetch(`/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, {
-    method: 'PUT', body: JSON.stringify({ values }),
-  });
+  await sheetsFetch(`/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
 }
-
 async function appendTaskRow(task) {
-  const range = `${TASKS_SHEET}!A:K`;
-  const values = [COLUMNS.map((c) => task[c] || '')];
-  await sheetsFetch(`/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, {
-    method: 'POST', body: JSON.stringify({ values }),
-  });
+  await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A:K')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, { method: 'POST', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
 }
-
 async function deleteTaskRow(rowIndex) {
-  await sheetsFetch(':batchUpdate', {
-    method: 'POST',
-    body: JSON.stringify({
-      requests: [{ deleteDimension: { range: { sheetId: tasksSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } }],
-    }),
-  });
+  await sheetsFetch(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: tasksSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } }] }) });
 }
-
 async function fetchTags() {
   const data = await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A2:B10000')}`);
   const rows = data.values || [];
@@ -410,97 +304,42 @@ async function fetchTags() {
   result['Подпроект'] = [...new Set(result['Подпроект'])].sort();
   return result;
 }
-
 async function saveTagsFull(newTags) {
   const rows = [['Категория', 'Значение']];
   ['Проект', 'Подпроект'].forEach((cat) => newTags[cat].forEach((v) => rows.push([cat, v])));
   await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A:B')}:clear`, { method: 'POST', body: JSON.stringify({}) });
-  await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, {
-    method: 'PUT', body: JSON.stringify({ values: rows }),
-  });
+  await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: rows }) });
 }
 
-/* ---------------- запуск приложения ---------------- */
+/* ---------------- запуск ---------------- */
 async function boot() {
-  setSyncStatus('Загрузка…', 'muted');
   try {
     await ensureSheetIds();
     await reload();
-    setSyncStatus('🟢 Загружено', 'done');
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('UNAUTHENTICATED')) {
       clearToken();
       document.getElementById('signinScreen').style.display = 'flex';
       document.getElementById('app').style.display = 'none';
       document.getElementById('signinError').textContent = 'Сессия истекла — войдите заново.';
-      return;
+    } else {
+      alert('Ошибка загрузки: ' + e.message);
     }
-    setSyncStatus('🔴 Ошибка: ' + e.message, 'blocked');
   }
 }
-
-let firstLoad = true;
-
-const UI_STATE_KEY = 'trackerUIState';
-function saveUIState() {
-  const state = {
-    process: document.getElementById('filterProcess').value,
-    project: document.getElementById('filterProject').value,
-    type: document.getElementById('filterType').value,
-    search: document.getElementById('filterSearch').value,
-    relevant: document.getElementById('filterRelevant').value,
-    sort: columnSort,
-    tab: currentTab,
-  };
-  localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
-}
-
-function restoreUIState() {
-  const raw = localStorage.getItem(UI_STATE_KEY);
-  if (!raw) return;
-  try {
-    const state = JSON.parse(raw);
-    if (state.process !== undefined) document.getElementById('filterProcess').value = state.process;
-    if (state.project !== undefined) document.getElementById('filterProject').value = state.project;
-    if (state.type !== undefined) document.getElementById('filterType').value = state.type;
-    if (state.search !== undefined) document.getElementById('filterSearch').value = state.search;
-    if (state.relevant !== undefined) document.getElementById('filterRelevant').value = state.relevant;
-    if (state.sort) columnSort = state.sort;
-    if (state.tab) currentTab = state.tab;
-  } catch (e) { /* повреждённое сохранённое состояние — просто игнорируем */ }
-}
-
 async function reload() {
   const [t, tg] = await Promise.all([fetchAllTasks(), fetchTags()]);
-  tasks = t;
-  tags = tg;
-  populateFilters();
-  if (firstLoad) { restoreUIState(); firstLoad = false; }
+  tasks = t; tags = tg;
+  document.getElementById('f_status').innerHTML = STATUSES.map((s) => `<option>${s}</option>`).join('');
+  if (currentDayIndex === null) currentDayIndex = (new Date().getDay() || 7) - 1; // по умолчанию — сегодняшний день
   renderTabs();
   render();
 }
 
-function setSyncStatus(text, colorVar) {
-  const el = document.getElementById('syncStatus');
-  el.textContent = text;
-  el.style.color = `var(--${colorVar})`;
-}
-
-async function refreshWithStatus() {
-  setSyncStatus('Обновление…', 'muted');
-  try {
-    await reload();
-    setSyncStatus('🟢 Обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }), 'done');
-  } catch (e) {
-    setSyncStatus('🔴 ' + e.message, 'blocked');
-  }
-}
-
-/* ---------------- вспомогательные функции (общие с ПК-версией) ---------------- */
+/* ---------------- вспомогательные функции ---------------- */
 function splitTags(v) { return (v || '').split(',').map((s) => s.trim()).filter(Boolean); }
 function escapeHtml(s) { return (s || '').replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c])); }
 function q(s) { return (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
-
 function tagColor(text) {
   if (!text) return '#33383f';
   let hash = 0;
@@ -508,150 +347,63 @@ function tagColor(text) {
   return `hsl(${Math.abs(hash) % 360}, 38%, 52%)`;
 }
 function priorityColor(p) { return PRIORITY_COLORS[p] || '#6b7078'; }
-
-function parseDate(dmy) {
-  if (!dmy || !dmy.includes('.')) return null;
-  const [d, m, y] = dmy.split('.').map(Number);
-  return new Date(y, m - 1, d);
-}
+function parseDate(dmy) { if (!dmy || !dmy.includes('.')) return null; const [d, m, y] = dmy.split('.').map(Number); return new Date(y, m - 1, d); }
 function toISO(dmy) { if (!dmy || !dmy.includes('.')) return ''; const [d, m, y] = dmy.split('.'); return `${y}-${m}-${d}`; }
 function toRu(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}.${m}.${y}`; }
-function todayRu() {
-  const d = new Date();
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
-}
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-function mondayOfThisWeekISO() {
-  const d = new Date(); const day = d.getDay() || 7;
-  d.setDate(d.getDate() - day + 1);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-function relevanceCutoff() {
-  const val = document.getElementById('filterRelevant').value;
-  return val ? parseDate(toRu(val)) : null;
-}
-function nextId() {
-  const ids = tasks.map((t) => parseInt(t.id, 10)).filter((n) => !isNaN(n));
-  return String(ids.length ? Math.max(...ids) + 1 : 1);
-}
+function toRuFromDate(d) { return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; }
+function isoFromDate(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function todayISO() { return isoFromDate(new Date()); }
+function sameDay(a, b) { return a && b && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function nextId() { const ids = tasks.map((t) => parseInt(t.id, 10)).filter((n) => !isNaN(n)); return String(ids.length ? Math.max(...ids) + 1 : 1); }
 
-/* ---------------- фильтры / вкладки / сортировка ---------------- */
-function populateFilters() {
-  document.getElementById('filterProcess').innerHTML =
-    '<option value="">Все процессы</option>' + tags['Проект'].map((p) => `<option>${escapeHtml(p)}</option>`).join('');
-  document.getElementById('filterProject').innerHTML =
-    '<option value="">Все проекты</option>' + tags['Подпроект'].map((p) => `<option>${escapeHtml(p)}</option>`).join('');
-  document.getElementById('filterType').innerHTML =
-    '<option value="">Все приоритеты</option>' + PRIORITIES.map((p) => `<option>${p}</option>`).join('');
-  document.getElementById('f_status').innerHTML = STATUSES.map((s) => `<option>${s}</option>`).join('');
-  document.getElementById('f_type').innerHTML = PRIORITIES.map((p) => `<option>${p}</option>`).join('');
+function getWeekDates(offset) {
+  const now = new Date(); const day = now.getDay() || 7;
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0);
+  monday.setDate(now.getDate() - day + 1 + offset * 7);
+  return Array.from({ length: 7 }, (_, i) => { const d = new Date(monday); d.setDate(monday.getDate() + i); return d; });
 }
-
-function commonFiltered() {
-  const processFilter = document.getElementById('filterProcess').value;
-  const projectFilter = document.getElementById('filterProject').value;
-  const typeFilter = document.getElementById('filterType').value;
-  const search = document.getElementById('filterSearch').value.toLowerCase();
-  return tasks.filter((t) =>
-    (!processFilter || splitTags(t.Проект).includes(processFilter)) &&
-    (!projectFilter || splitTags(t.Подпроект).includes(projectFilter)) &&
-    (!typeFilter || t.Приоритет === typeFilter) &&
-    (!search || t.Задача.toLowerCase().includes(search) || (t.Примечания || '').toLowerCase().includes(search))
-  );
-}
-
-function tasksForTab(status) {
-  const common = commonFiltered();
-  if (status === 'Бэклог') return common.filter((t) => t.Статус === 'Бэклог');
-  const cutoff = relevanceCutoff();
-  return common.filter((t) => {
-    if (t.Статус !== status) return false;
-    const relevantDate = parseDate(t.Актуально || t.Создано);
-    return !cutoff || !relevantDate || relevantDate >= cutoff;
-  });
-}
+function changeWeek(delta) { weekOffset = delta === 0 ? 0 : weekOffset + delta; renderTabs(); render(); }
 
 function renderTabs() {
-  const tabsEl = document.getElementById('tabs');
-  tabsEl.innerHTML = STATUSES.map((s) => {
-    const count = tasksForTab(s).length;
-    return `<div class="tab ${s === currentTab ? 'active' : ''}" onclick="selectTab('${s}')">${s}<span class="count">${count}</span></div>`;
+  const weekDates = getWeekDates(weekOffset);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  document.getElementById('weekLabel').textContent = `${toRuFromDate(weekDates[0])} — ${toRuFromDate(weekDates[6])}`;
+  const openTasks = tasks.filter((t) => !CLOSING_STATUSES.has(t.Статус));
+
+  document.getElementById('tabs').innerHTML = weekDates.map((date, i) => {
+    const count = openTasks.filter((t) => sameDay(parseDate(t.Актуально || t.Создано), date)).length;
+    const cls = ['tab']; if (i === currentDayIndex) cls.push('active'); if (sameDay(date, today)) cls.push('today');
+    return `<div class="${cls.join(' ')}" onclick="selectDay(${i})">${WEEKDAY_LABELS[i]} ${date.getDate()}<span class="count">${count}</span></div>`;
   }).join('');
-
-  const sortSelect = document.getElementById('sortSelect');
-  const cur = columnSort[currentTab] || '';
-  sortSelect.innerHTML = [
-    ['', 'Без сортировки'], ['due_asc', 'Дата закрытия ↑'], ['due_desc', 'Дата закрытия ↓'],
-    ['created_asc', 'Создано ↑'], ['created_desc', 'Создано ↓'],
-  ].map(([v, label]) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${label}</option>`).join('');
 }
+function selectDay(i) { currentDayIndex = i; renderTabs(); render(); }
 
-function selectTab(status) {
-  currentTab = status;
-  renderTabs();
-  render();
-}
-
-function setCurrentSort(value) {
-  if (value) columnSort[currentTab] = value; else delete columnSort[currentTab];
-  render();
-}
-
-function showMore() { columnVisible[currentTab] = (columnVisible[currentTab] || PAGE_SIZE) + PAGE_SIZE; render(); }
-function showAllInColumn() { columnVisible[currentTab] = Infinity; render(); }
-function clearRelevantFilter() { document.getElementById('filterRelevant').value = ''; renderTabs(); render(); }
-
-/* ---------------- рендер списка карточек ---------------- */
 function render() {
-  saveUIState();
   const list = document.getElementById('cardsList');
-  const search = document.getElementById('filterSearch').value;
-  const searching = !!search;
-
-  let items = tasksForTab(currentTab);
-  const sortVal = columnSort[currentTab];
-  if (sortVal) {
-    const [field, dir] = sortVal.split('_');
-    const key = field === 'due' ? 'Дата закрытия' : 'Создано';
-    items = [...items].sort((a, b) => {
-      const av = parseDate(a[key]), bv = parseDate(b[key]);
-      if (!av && !bv) return 0; if (!av) return 1; if (!bv) return -1;
-      return dir === 'asc' ? av - bv : bv - av;
+  const weekDates = getWeekDates(weekOffset);
+  const date = weekDates[currentDayIndex];
+  const openTasks = tasks.filter((t) => !CLOSING_STATUSES.has(t.Статус));
+  const dayTasks = openTasks
+    .filter((t) => sameDay(parseDate(t.Актуально || t.Создано), date))
+    .sort((a, b) => {
+      const order = { 'Критично': 0, 'Высокий': 1, 'Средний': 2, 'Низкий': 3, '': 4 };
+      return (order[a.Приоритет] ?? 4) - (order[b.Приоритет] ?? 4);
     });
-  }
 
-  const total = items.length;
-  const limit = searching ? total : (columnVisible[currentTab] || PAGE_SIZE);
-  const visible = items.slice(0, limit);
-  const remaining = total - visible.length;
-
-  if (!visible.length) {
-    list.innerHTML = '<div class="empty-note">пусто</div>';
-    return;
-  }
-
-  list.innerHTML = visible.map(cardHtml).join('') + (remaining > 0 ? `
-    <div class="col-more">
-      <button class="secondary small" onclick="showMore()">Ещё 25 (осталось ${remaining})</button>
-      <button class="secondary small" onclick="showAllInColumn()">Раскрыть все</button>
-    </div>` : '');
+  list.innerHTML = dayTasks.length ? dayTasks.map(cardHtml).join('') : '<div class="empty-note">на этот день ничего не запланировано</div>';
 }
 
 function cardHtml(t) {
   const tagHtml = (val) => splitTags(val).map((v) => `<span class="tag" style="background:${tagColor(v)}">${escapeHtml(v)}</span>`).join('');
-  const due = t['Дата закрытия'] ? `<span class="tag due">${t['Дата закрытия']}</span>` : '';
   return `
     <div class="card" onclick="openModal(${t._row})">
       <div class="card-head" style="background:${priorityColor(t.Приоритет)}">
         <span>${escapeHtml(t.Приоритет || '—')}</span>
-        <span>${t.Создано ? 'Создано ' + t.Создано : ''}</span>
+        <span>${t.Статус}</span>
       </div>
       <div class="card-body">
         <div class="task-title">${escapeHtml(t.Задача)}</div>
-        <div class="meta">${tagHtml(t.Проект)}${tagHtml(t.Подпроект)}${due}</div>
+        <div class="meta">${tagHtml(t.Проект)}${tagHtml(t.Подпроект)}</div>
       </div>
     </div>`;
 }
@@ -690,13 +442,12 @@ function toggleNotesLine(idx) {
   renderNotesChecklist();
 }
 
-/* ---------------- мультивыбор тегов в карточке ---------------- */
+/* ---------------- мультивыбор тегов ---------------- */
 function renderTagPicker(category, prefix) {
   const chips = selectedTags[category].map((v) =>
     `<span class="tagpicker-chip" style="background:${tagColor(v)}">${escapeHtml(v)}<span class="x" onclick="removeChip('${category}','${prefix}','${q(v)}')">×</span></span>`
   ).join('') || '<span style="color:var(--muted);font-size:12px">не выбрано</span>';
   document.getElementById(`${prefix}_chips`).innerHTML = chips;
-
   const options = tags[category].map((v) => {
     const checked = selectedTags[category].includes(v) ? 'checked' : '';
     return `<label><input type="checkbox" ${checked} onchange="toggleTag('${category}','${prefix}','${q(v)}', this.checked)"> ${escapeHtml(v)}</label>`;
@@ -722,12 +473,14 @@ async function addTagInline(category, prefix) {
   renderTagPicker(category, prefix);
 }
 
-/* ---------------- модалка задачи ---------------- */
+/* ---------------- модалка карточки ---------------- */
 function touchRelevant() { document.getElementById('f_relevant').value = todayISO(); }
 
 function openModal(rowIndex) {
   editingRow = rowIndex || null;
   const t = editingRow ? tasks.find((x) => x._row === editingRow) : {};
+  const weekDates = getWeekDates(weekOffset);
+  newTaskDefaultDate = isoFromDate(weekDates[currentDayIndex]);
 
   document.getElementById('modalTitle').textContent = editingRow ? 'Задача' : 'Новая задача';
   document.getElementById('deleteBtn').style.display = editingRow ? 'inline-block' : 'none';
@@ -738,9 +491,10 @@ function openModal(rowIndex) {
   selectedTags['Подпроект'] = splitTags(t.Подпроект);
   renderTagPicker('Проект', 'tp_process');
   renderTagPicker('Подпроект', 'tp_subprocess');
+  document.getElementById('f_type').innerHTML = ['Критично', 'Высокий', 'Средний', 'Низкий'].map((p) => `<option>${p}</option>`).join('');
   document.getElementById('f_type').value = t.Приоритет || 'Средний';
   document.getElementById('f_due').value = toISO(t['Дата закрытия']);
-  document.getElementById('f_relevant').value = toISO(t.Актуально);
+  document.getElementById('f_relevant').value = editingRow ? toISO(t.Актуально) : newTaskDefaultDate;
   document.getElementById('f_notes').value = t.Примечания || '';
   document.getElementById('f_ticket').value = t['№ заявки'] || '';
   renderNotesChecklist();
@@ -767,22 +521,18 @@ async function save() {
       'Примечания': document.getElementById('f_notes').value,
       '№ заявки': document.getElementById('f_ticket').value,
     };
-
     if (editingRow) {
       const current = tasks.find((x) => x._row === editingRow);
-      if (CLOSING_STATUSES.has(patch['Статус']) && !CLOSING_STATUSES.has(current['Статус'])) {
-        if (!(patch['Дата закрытия'] || current['Дата закрытия'])) patch['Дата закрытия'] = todayRu();
-      }
       const merged = { ...current, ...patch, _row: editingRow };
       await updateTaskRow(merged);
     } else {
-      const today = todayRu();
-      const task = { id: nextId(), 'Создано': today, 'Актуально': patch['Актуально'] || today, ...patch };
-      if (!task['Актуально']) task['Актуально'] = today;
+      const today = toRuFromDate(new Date());
+      const task = { id: nextId(), 'Создано': today, ...patch };
+      if (!task['Актуально']) task['Актуально'] = newTaskDefaultDate ? toRu(newTaskDefaultDate) : today;
       await appendTaskRow(task);
     }
     closeModal();
-    await refreshWithStatus();
+    await reload();
   } catch (e) {
     alert('Не удалось сохранить: ' + e.message);
   }
@@ -795,53 +545,10 @@ async function deleteCurrent() {
   try {
     await deleteTaskRow(editingRow);
     closeModal();
-    await refreshWithStatus();
+    await reload();
   } catch (e) {
     alert('Не удалось удалить: ' + e.message);
   }
-}
-
-/* ---------------- окно "Справочник тегов" ---------------- */
-function renderTagsModal() {
-  const renderCat = (category, containerId) => {
-    document.getElementById(containerId).innerHTML = tags[category].map((v) => `
-      <span class="tags-modal-chip" style="background:${tagColor(v)}">${escapeHtml(v)}<span class="x" onclick="removeTag('${category}', '${q(v)}')">×</span></span>`
-    ).join('') || '<span style="color:var(--muted);font-size:12px">пока пусто</span>';
-  };
-  renderCat('Проект', 'tagsListProcess');
-  renderCat('Подпроект', 'tagsListSubprocess');
-}
-function openTagsModal() { renderTagsModal(); document.getElementById('tagsModalBg').classList.add('open'); }
-function closeTagsModal() { document.getElementById('tagsModalBg').classList.remove('open'); }
-
-async function addTagFromModal(category, inputId) {
-  const input = document.getElementById(inputId);
-  const value = input.value.trim();
-  if (!value) return;
-  if (!tags[category].includes(value)) { tags[category].push(value); tags[category].sort(); await saveTagsFull(tags); }
-  input.value = '';
-  renderTagsModal();
-  populateFilters();
-}
-async function removeTag(category, value) {
-  if (!confirm(`Удалить тег «${value}» из справочника?`)) return;
-  tags[category] = tags[category].filter((v) => v !== value);
-  await saveTagsFull(tags);
-  renderTagsModal();
-  populateFilters();
-}
-
-/* ---------------- события ---------------- */
-document.getElementById('filterProcess').addEventListener('change', () => { renderTabs(); render(); });
-document.getElementById('filterProject').addEventListener('change', () => { renderTabs(); render(); });
-document.getElementById('filterType').addEventListener('change', () => { renderTabs(); render(); });
-document.getElementById('filterSearch').addEventListener('input', () => { renderTabs(); render(); });
-document.getElementById('filterRelevant').addEventListener('change', () => { renderTabs(); render(); });
-document.getElementById('f_notes').addEventListener('input', () => { syncTicketFromNotes(); renderNotesChecklist(); });
-document.getElementById('filterRelevant').value = mondayOfThisWeekISO();
-
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
 </script>
 </body>
