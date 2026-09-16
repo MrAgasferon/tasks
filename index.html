@@ -246,7 +246,7 @@
 
 <script>
 /* ================== настройки — поменяй под свою таблицу =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -438,11 +438,43 @@ async function boot() {
   }
 }
 
+let firstLoad = true;
+
+const UI_STATE_KEY = 'trackerUIState';
+function saveUIState() {
+  const state = {
+    process: document.getElementById('filterProcess').value,
+    project: document.getElementById('filterProject').value,
+    type: document.getElementById('filterType').value,
+    search: document.getElementById('filterSearch').value,
+    relevant: document.getElementById('filterRelevant').value,
+    sort: columnSort,
+    tab: currentTab,
+  };
+  localStorage.setItem(UI_STATE_KEY, JSON.stringify(state));
+}
+
+function restoreUIState() {
+  const raw = localStorage.getItem(UI_STATE_KEY);
+  if (!raw) return;
+  try {
+    const state = JSON.parse(raw);
+    if (state.process !== undefined) document.getElementById('filterProcess').value = state.process;
+    if (state.project !== undefined) document.getElementById('filterProject').value = state.project;
+    if (state.type !== undefined) document.getElementById('filterType').value = state.type;
+    if (state.search !== undefined) document.getElementById('filterSearch').value = state.search;
+    if (state.relevant !== undefined) document.getElementById('filterRelevant').value = state.relevant;
+    if (state.sort) columnSort = state.sort;
+    if (state.tab) currentTab = state.tab;
+  } catch (e) { /* повреждённое сохранённое состояние — просто игнорируем */ }
+}
+
 async function reload() {
   const [t, tg] = await Promise.all([fetchAllTasks(), fetchTags()]);
   tasks = t;
   tags = tg;
   populateFilters();
+  if (firstLoad) { restoreUIState(); firstLoad = false; }
   renderTabs();
   render();
 }
@@ -573,6 +605,7 @@ function clearRelevantFilter() { document.getElementById('filterRelevant').value
 
 /* ---------------- рендер списка карточек ---------------- */
 function render() {
+  saveUIState();
   const list = document.getElementById('cardsList');
   const search = document.getElementById('filterSearch').value;
   const searching = !!search;

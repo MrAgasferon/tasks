@@ -1,7 +1,7 @@
 // Кэшируем только статическую оболочку приложения (HTML/manifest/иконки).
 // Данные (Google Sheets API) всегда идут в сеть напрямую — офлайн-работы
 // с данными эта PWA не даёт, только быстрый запуск интерфейса.
-const CACHE_NAME = 'tracker-shell-v4';
+const CACHE_NAME = 'tracker-shell-v5';
 const SHELL_FILES = ['./index.html', './analytics.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
