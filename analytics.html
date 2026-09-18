@@ -21,6 +21,7 @@
   select, input, button { background: var(--panel); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: inherit; }
   button { background: var(--accent); color: #1b1e24; border: none; font-weight: 600; cursor: pointer; }
   button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 400; }
+  button.small { padding: 5px 9px; font-size: 12px; }
 
   header { padding: 12px 14px; border-bottom: 1px solid var(--line); }
   .header-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -51,7 +52,7 @@
   .bar-row .bar-fill { height: 100%; border-radius: 4px; }
   .bar-row .bar-count { color: var(--muted); text-align: right; }
 
-  .task-row { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .task-row { padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12.5px; cursor: pointer; }
   .task-row:last-child { border-bottom: none; }
   .task-row .title { margin-bottom: 4px; }
   .task-row .meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 10.5px; color: var(--muted); }
@@ -62,6 +63,39 @@
   .signin-screen h1 { color: var(--accent); font-size: 20px; margin: 0; }
   .signin-screen p { color: var(--muted); font-size: 13px; margin: 0; }
   .signin-screen button { padding: 12px 24px; font-size: 15px; }
+
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.55); align-items: flex-end; justify-content: center; z-index: 20; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--panel); border-radius: 16px 16px 0 0; padding: 18px 16px 24px; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; }
+  .modal h2 { margin: 0 0 14px; font-size: 16px; color: var(--accent); }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .field input, .field select, .field textarea { width: 100%; }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field textarea#f_notes { min-height: 120px; }
+  .field input[readonly] { opacity: 0.6; }
+  .field-row { display: flex; gap: 10px; }
+  .field-row .field { flex: 1; }
+  .tag-field-row { display: flex; gap: 6px; align-items: center; }
+  .tag-field-row input { flex: 1; }
+  .modal-actions { display: flex; justify-content: space-between; margin-top: 16px; }
+  .modal-actions .right { display: flex; gap: 8px; }
+
+  .tagpicker-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; min-height: 24px; }
+  .tagpicker-chip { display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 5px; font-size: 12px; color: #1b1e24; font-weight: 600; }
+  .tagpicker-chip .x { cursor: pointer; opacity: 0.65; font-weight: 700; }
+  details.tagpicker-dropdown summary { cursor: pointer; font-size: 12px; color: var(--accent); padding: 5px 0; list-style: none; }
+  details.tagpicker-dropdown summary::-webkit-details-marker { display: none; }
+  .tagpicker-options { max-height: 160px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; margin-top: 4px; background: var(--surface-2); }
+  .tagpicker-options label { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 14px; }
+  .tagpicker-options label input { width: auto; padding: 0; }
+  .tagpicker-add { display: flex; gap: 6px; margin-top: 6px; }
+  .tagpicker-add input { flex: 1; }
+
+  .notes-checklist { margin-top: 6px; display: none; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--surface-2); }
+  .notes-check-row { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; padding: 4px 0; }
+  .notes-check-row input { margin-top: 2px; width: auto; padding: 0; }
+  .notes-check-row .struck { text-decoration: line-through; opacity: 0.55; }
 </style>
 <script src="theme.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -117,18 +151,93 @@
   </main>
 </div>
 
+<!-- модалка карточки -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">Задача</h2>
+    <div class="field"><label>Задача</label><textarea id="f_task"></textarea></div>
+
+    <div class="field-row">
+      <div class="field"><label>Статус</label><select id="f_status"></select></div>
+      <div class="field"><label>Приоритет</label><select id="f_type"></select></div>
+    </div>
+
+    <div class="field">
+      <label>Процесс</label>
+      <div class="tagpicker-chips" id="tp_process_chips"></div>
+      <details class="tagpicker-dropdown">
+        <summary>Выбрать / изменить</summary>
+        <div class="tagpicker-options" id="tp_process_options"></div>
+        <div class="tagpicker-add">
+          <input id="tp_process_new" placeholder="Новый процесс…">
+          <button class="small" onclick="addTagInline('Проект','tp_process')">+</button>
+        </div>
+      </details>
+    </div>
+    <div class="field">
+      <label>Проект</label>
+      <div class="tagpicker-chips" id="tp_subprocess_chips"></div>
+      <details class="tagpicker-dropdown">
+        <summary>Выбрать / изменить</summary>
+        <div class="tagpicker-options" id="tp_subprocess_options"></div>
+        <div class="tagpicker-add">
+          <input id="tp_subprocess_new" placeholder="Новый проект…">
+          <button class="small" onclick="addTagInline('Подпроект','tp_subprocess')">+</button>
+        </div>
+      </details>
+    </div>
+
+    <div class="field-row">
+      <div class="field"><label>Дата закрытия</label><input type="date" id="f_due"></div>
+      <div class="field">
+        <label>Актуально</label>
+        <div class="tag-field-row">
+          <input type="date" id="f_relevant">
+          <button class="secondary small" onclick="touchRelevant()">Сегодня</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field"><label>Создано</label><input id="f_created" readonly></div>
+    </div>
+
+    <div class="field">
+      <label>Примечания</label>
+      <textarea id="f_notes"></textarea>
+      <div id="notesChecklist" class="notes-checklist"></div>
+    </div>
+    <div class="field"><label>№ заявки <span style="opacity:.6">(из примечаний)</span></label><input id="f_ticket" readonly></div>
+
+    <div class="modal-actions">
+      <button class="secondary" id="deleteBtn" onclick="deleteCurrent()">Удалить</button>
+      <div class="right">
+        <button class="secondary" onclick="closeModal()">Отмена</button>
+        <button onclick="save()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 const TASKS_SHEET = 'Tasks';
+const TAGS_SHEET = 'Tags';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const COLUMNS = ['id', 'Задача', 'Статус', 'Проект', 'Подпроект', 'Приоритет',
                  'Дата закрытия', 'Создано', 'Примечания', '№ заявки', 'Актуально'];
+const STATUSES = ['Бэклог', 'Не начато', 'Выполняется', 'На паузе', 'Заблокировано', 'Выполнено'];
 const PRIORITY_COLORS = { 'Критично': '#c25b52', 'Высокий': '#d68a2b', 'Средний': '#3f7fbf', 'Низкий': '#6b7078' };
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 let accessToken = null;
+let tasksSheetId = null;
+let tagsSheetId = null;
 let allTasks = [];
+let tags = { 'Проект': [], 'Подпроект': [] };
+let selectedTags = { 'Проект': [], 'Подпроект': [] };
+let editingRow = null;
 let weekOffset = 0;
 let tokenClient;
 
@@ -172,8 +281,11 @@ function showApp() {
 }
 
 function apiBase() { return `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}`; }
-async function sheetsFetch(path) {
-  const res = await fetch(apiBase() + path, { headers: { 'Authorization': `Bearer ${accessToken}` } });
+async function sheetsFetch(path, options = {}) {
+  const res = await fetch(apiBase() + path, {
+    ...options,
+    headers: { ...(options.headers || {}), 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+  });
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Sheets API ${res.status}: ${text}`);
@@ -181,19 +293,54 @@ async function sheetsFetch(path) {
   return res.json();
 }
 
+async function ensureSheetIds() {
+  const meta = await sheetsFetch('?fields=sheets.properties');
+  for (const s of meta.sheets) {
+    if (s.properties.title === TASKS_SHEET) tasksSheetId = s.properties.sheetId;
+    if (s.properties.title === TAGS_SHEET) tagsSheetId = s.properties.sheetId;
+  }
+  if (tagsSheetId === undefined || tagsSheetId === null) {
+    const res = await sheetsFetch(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: [{ addSheet: { properties: { title: TAGS_SHEET } } }] }) });
+    tagsSheetId = res.replies[0].addSheet.properties.sheetId;
+    await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [['Категория', 'Значение']] }) });
+  }
+}
+
 async function fetchAllTasks() {
   const data = await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A2:K100000')}`);
   const rows = data.values || [];
-  return rows.filter((r) => r[0] && r[0].trim()).map((row) => {
-    const task = {};
-    COLUMNS.forEach((c, idx) => (task[c] = row[idx] || ''));
-    return task;
-  });
+  return rows.map((row, i) => ({ row, rowIndex: i + 2 })).filter(({ row }) => row[0] && row[0].trim())
+    .map(({ row, rowIndex }) => { const task = {}; COLUMNS.forEach((c, idx) => (task[c] = row[idx] || '')); task._row = rowIndex; return task; });
+}
+async function updateTaskRow(task) {
+  const range = `${TASKS_SHEET}!A${task._row}:K${task._row}`;
+  await sheetsFetch(`/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
+}
+async function deleteTaskRow(rowIndex) {
+  await sheetsFetch(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: tasksSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } }] }) });
+}
+async function fetchTags() {
+  const data = await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A2:B10000')}`);
+  const rows = data.values || [];
+  const result = { 'Проект': [], 'Подпроект': [] };
+  rows.forEach((r) => { if (r[0] && result[r[0]] && r[1]) result[r[0]].push(r[1].trim()); });
+  result['Проект'] = [...new Set(result['Проект'])].sort();
+  result['Подпроект'] = [...new Set(result['Подпроект'])].sort();
+  return result;
+}
+async function saveTagsFull(newTags) {
+  const rows = [['Категория', 'Значение']];
+  ['Проект', 'Подпроект'].forEach((cat) => newTags[cat].forEach((v) => rows.push([cat, v])));
+  await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A:B')}:clear`, { method: 'POST', body: JSON.stringify({}) });
+  await sheetsFetch(`/values/${encodeURIComponent(TAGS_SHEET + '!A1')}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: rows }) });
 }
 
 async function load() {
   try {
-    allTasks = await fetchAllTasks();
+    await ensureSheetIds();
+    const [t, tg] = await Promise.all([fetchAllTasks(), fetchTags()]);
+    allTasks = t; tags = tg;
+    document.getElementById('f_status').innerHTML = STATUSES.map((s) => `<option>${s}</option>`).join('');
     render();
   } catch (e) {
     if (e.message.includes('401') || e.message.includes('UNAUTHENTICATED')) {
@@ -282,12 +429,145 @@ function render() {
         const days = daysBetween(parseDate(t.Создано), parseDate(t['Дата закрытия']));
         const tagsHtml = splitTags(t.Проект).concat(splitTags(t.Подпроект)).map((v) => `<span class="tag-chip" style="background:${tagColor(v)}">${escapeHtml(v)}</span>`).join('');
         const prioHtml = t.Приоритет ? `<span class="tag-chip" style="background:${PRIORITY_COLORS[t.Приоритет] || '#6b7078'}">${escapeHtml(t.Приоритет)}</span>` : '';
-        return `<div class="task-row">
+        return `<div class="task-row" onclick="openModal(${t._row})">
           <div class="title">${escapeHtml(t.Задача)}</div>
           <div class="meta">${t['Дата закрытия']} · ${days ?? '—'} дн. ${tagsHtml} ${prioHtml}</div>
         </div>`;
       }).join('')
     : '<div class="empty-note">за эту неделю ничего не выполнено</div>';
+}
+
+/* ---------------- чек-лист в примечаниях ---------------- */
+const TICKET_RE = /ЗР\d{9}/;
+function syncTicketFromNotes() {
+  const match = document.getElementById('f_notes').value.match(TICKET_RE);
+  document.getElementById('f_ticket').value = match ? match[0] : '';
+}
+const NUMBERED_LINE_RE = /^(\d+\.\s*)(.*)$/;
+function renderNotesChecklist() {
+  const container = document.getElementById('notesChecklist');
+  const lines = document.getElementById('f_notes').value.split('\n');
+  let html = ''; let hasList = false;
+  lines.forEach((line, idx) => {
+    const m = line.match(NUMBERED_LINE_RE);
+    if (!m || !m[2].trim()) return;
+    hasList = true;
+    const strikeMatch = m[2].match(/^~~(.*)~~$/);
+    const checked = !!strikeMatch;
+    const text = checked ? strikeMatch[1] : m[2];
+    html += `<label class="notes-check-row"><input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleNotesLine(${idx})"><span class="${checked ? 'struck' : ''}">${escapeHtml(m[1])}${escapeHtml(text)}</span></label>`;
+  });
+  container.innerHTML = html;
+  container.style.display = hasList ? 'block' : 'none';
+}
+function toggleNotesLine(idx) {
+  const ta = document.getElementById('f_notes');
+  const lines = ta.value.split('\n');
+  const m = lines[idx].match(NUMBERED_LINE_RE);
+  if (!m) return;
+  const strikeMatch = m[2].match(/^~~(.*)~~$/);
+  lines[idx] = strikeMatch ? (m[1] + strikeMatch[1]) : (m[1] + '~~' + m[2] + '~~');
+  ta.value = lines.join('\n');
+  renderNotesChecklist();
+}
+
+/* ---------------- мультивыбор тегов ---------------- */
+function q(s) { return (s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+function renderTagPicker(category, prefix) {
+  const chips = selectedTags[category].map((v) =>
+    `<span class="tagpicker-chip" style="background:${tagColor(v)}">${escapeHtml(v)}<span class="x" onclick="removeChip('${category}','${prefix}','${q(v)}')">×</span></span>`
+  ).join('') || '<span style="color:var(--muted);font-size:12px">не выбрано</span>';
+  document.getElementById(`${prefix}_chips`).innerHTML = chips;
+  const options = tags[category].map((v) => {
+    const checked = selectedTags[category].includes(v) ? 'checked' : '';
+    return `<label><input type="checkbox" ${checked} onchange="toggleTag('${category}','${prefix}','${q(v)}', this.checked)"> ${escapeHtml(v)}</label>`;
+  }).join('') || '<div style="color:var(--muted);font-size:12px">тегов пока нет</div>';
+  document.getElementById(`${prefix}_options`).innerHTML = options;
+}
+function toggleTag(category, prefix, value, checked) {
+  if (checked) { if (!selectedTags[category].includes(value)) selectedTags[category].push(value); }
+  else { selectedTags[category] = selectedTags[category].filter((v) => v !== value); }
+  renderTagPicker(category, prefix);
+}
+function removeChip(category, prefix, value) {
+  selectedTags[category] = selectedTags[category].filter((v) => v !== value);
+  renderTagPicker(category, prefix);
+}
+async function addTagInline(category, prefix) {
+  const input = document.getElementById(`${prefix}_new`);
+  const value = input.value.trim();
+  if (!value) return;
+  if (!tags[category].includes(value)) { tags[category].push(value); tags[category].sort(); await saveTagsFull(tags); }
+  if (!selectedTags[category].includes(value)) selectedTags[category].push(value);
+  input.value = '';
+  renderTagPicker(category, prefix);
+}
+
+/* ---------------- модалка карточки ---------------- */
+function toISO(dmy) { if (!dmy || !dmy.includes('.')) return ''; const [d, m, y] = dmy.split('.'); return `${y}-${m}-${d}`; }
+function toRu(iso) { if (!iso) return ''; const [y, m, d] = iso.split('-'); return `${d}.${m}.${y}`; }
+function todayISO() { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+function touchRelevant() { document.getElementById('f_relevant').value = todayISO(); }
+
+function openModal(rowIndex) {
+  editingRow = rowIndex;
+  const t = allTasks.find((x) => x._row === rowIndex) || {};
+
+  document.getElementById('f_task').value = t.Задача || '';
+  document.getElementById('f_status').value = t.Статус || STATUSES[1];
+  selectedTags['Проект'] = splitTags(t.Проект);
+  selectedTags['Подпроект'] = splitTags(t.Подпроект);
+  renderTagPicker('Проект', 'tp_process');
+  renderTagPicker('Подпроект', 'tp_subprocess');
+  document.getElementById('f_type').innerHTML = ['Критично', 'Высокий', 'Средний', 'Низкий'].map((p) => `<option>${p}</option>`).join('');
+  document.getElementById('f_type').value = t.Приоритет || 'Средний';
+  document.getElementById('f_due').value = toISO(t['Дата закрытия']);
+  document.getElementById('f_relevant').value = toISO(t.Актуально);
+  document.getElementById('f_notes').value = t.Примечания || '';
+  document.getElementById('f_ticket').value = t['№ заявки'] || '';
+  document.getElementById('f_created').value = t.Создано || '';
+  renderNotesChecklist();
+
+  document.getElementById('modalBg').classList.add('open');
+}
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+
+async function save() {
+  const btn = document.querySelector('#modalBg .modal-actions .right button:last-child');
+  btn.disabled = true; btn.textContent = 'Сохранение…';
+  try {
+    const current = allTasks.find((x) => x._row === editingRow);
+    const patch = {
+      'Задача': document.getElementById('f_task').value,
+      'Статус': document.getElementById('f_status').value,
+      'Проект': selectedTags['Проект'].join(', '),
+      'Подпроект': selectedTags['Подпроект'].join(', '),
+      'Приоритет': document.getElementById('f_type').value,
+      'Дата закрытия': toRu(document.getElementById('f_due').value),
+      'Актуально': toRu(document.getElementById('f_relevant').value),
+      'Примечания': document.getElementById('f_notes').value,
+      '№ заявки': document.getElementById('f_ticket').value,
+    };
+    const merged = { ...current, ...patch, _row: editingRow };
+    await updateTaskRow(merged);
+    closeModal();
+    await load();
+  } catch (e) {
+    alert('Не удалось сохранить: ' + e.message);
+  }
+  btn.disabled = false; btn.textContent = 'Сохранить';
+}
+
+async function deleteCurrent() {
+  if (!editingRow) return;
+  if (!confirm('Удалить задачу?')) return;
+  try {
+    await deleteTaskRow(editingRow);
+    closeModal();
+    await load();
+  } catch (e) {
+    alert('Не удалось удалить: ' + e.message);
+  }
 }
 </script>
 </body>
