@@ -395,12 +395,14 @@ function render() {
 
   const completed = allTasks.filter((t) => t.Статус === 'Выполнено' && inRange(parseDate(t['Дата закрытия']), monday, sunday));
   const created = allTasks.filter((t) => inRange(parseDate(t.Создано), monday, sunday));
+  const withTicket = created.filter((t) => t['№ заявки'] && t['№ заявки'].trim()).length;
   const lifetimes = completed.map((t) => daysBetween(parseDate(t.Создано), parseDate(t['Дата закрытия']))).filter((d) => d !== null);
   const avgLifetime = lifetimes.length ? Math.round(lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length) : null;
 
   document.getElementById('summaryRow').innerHTML = `
     <div class="summary-card"><div class="num">${completed.length}</div><div class="label">Выполнено</div></div>
     <div class="summary-card"><div class="num">${created.length}</div><div class="label">Создано</div></div>
+    <div class="summary-card"><div class="num">${withTicket}</div><div class="label">Заявок написано</div></div>
     <div class="summary-card"><div class="num">${created.length ? Math.round(completed.length / created.length * 100) + '%' : '—'}</div><div class="label">Выполнено к созданному</div></div>
     <div class="summary-card"><div class="num">${avgLifetime !== null ? avgLifetime : '—'}</div><div class="label">Ср. время жизни, дней</div></div>
   `;
