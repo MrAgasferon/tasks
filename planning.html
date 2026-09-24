@@ -523,10 +523,14 @@ async function save() {
     };
     if (editingRow) {
       const current = tasks.find((x) => x._row === editingRow);
+      if (CLOSING_STATUSES.has(patch['Статус']) && !CLOSING_STATUSES.has(current['Статус'])) {
+        if (!(patch['Дата закрытия'] || current['Дата закрытия'])) patch['Дата закрытия'] = toRuFromDate(new Date());
+      }
       const merged = { ...current, ...patch, _row: editingRow };
       await updateTaskRow(merged);
     } else {
       const today = toRuFromDate(new Date());
+      if (CLOSING_STATUSES.has(patch['Статус']) && !patch['Дата закрытия']) patch['Дата закрытия'] = today;
       const task = { id: nextId(), 'Создано': today, ...patch };
       if (!task['Актуально']) task['Актуально'] = newTaskDefaultDate ? toRu(newTaskDefaultDate) : today;
       await appendTaskRow(task);

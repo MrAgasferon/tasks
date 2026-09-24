@@ -229,6 +229,7 @@ const COLUMNS = ['id', 'Задача', 'Статус', 'Проект', 'Подп
                  'Дата закрытия', 'Создано', 'Примечания', '№ заявки', 'Актуально'];
 const STATUSES = ['Бэклог', 'Не начато', 'Выполняется', 'На паузе', 'Заблокировано', 'Выполнено'];
 const PRIORITY_COLORS = { 'Критично': '#c25b52', 'Высокий': '#d68a2b', 'Средний': '#3f7fbf', 'Низкий': '#6b7078' };
+const CLOSING_STATUSES = new Set(['Выполнено', 'Заблокировано']);
 const WEEKDAY_LABELS = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 let accessToken = null;
@@ -550,6 +551,9 @@ async function save() {
       'Примечания': document.getElementById('f_notes').value,
       '№ заявки': document.getElementById('f_ticket').value,
     };
+    if (CLOSING_STATUSES.has(patch['Статус']) && !CLOSING_STATUSES.has(current['Статус'])) {
+      if (!(patch['Дата закрытия'] || current['Дата закрытия'])) patch['Дата закрытия'] = toRu(todayISO());
+    }
     const merged = { ...current, ...patch, _row: editingRow };
     await updateTaskRow(merged);
     closeModal();

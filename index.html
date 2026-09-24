@@ -247,7 +247,7 @@
 
 <script>
 /* ================== настройки — поменяй под свою таблицу =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -777,6 +777,8 @@ async function save() {
       await updateTaskRow(merged);
     } else {
       const today = todayRu();
+      // задачу заводят сразу в закрывающем статусе ("по факту") — тоже подставить дату
+      if (CLOSING_STATUSES.has(patch['Статус']) && !patch['Дата закрытия']) patch['Дата закрытия'] = today;
       const task = { id: nextId(), 'Создано': today, 'Актуально': patch['Актуально'] || today, ...patch };
       if (!task['Актуально']) task['Актуально'] = today;
       await appendTaskRow(task);
