@@ -69,7 +69,7 @@
   .field-row .field { flex: 1; }
   .tag-field-row { display: flex; gap: 6px; align-items: center; }
   .tag-field-row input { flex: 1; }
-  .modal-actions { display: flex; justify-content: space-between; margin-top: 16px; }
+  .modal-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 16px; }
   .modal-actions .right { display: flex; gap: 8px; }
   .modal-actions .left { display: flex; gap: 8px; }
   .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
@@ -211,7 +211,7 @@
 
 <script>
 /* ================== настройки — те же, что в index.html =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -640,6 +640,8 @@ async function deleteCurrent() {
     alert('Не удалось удалить: ' + e.message);
   }
 }
+
+document.getElementById('f_notes').addEventListener('input', () => { syncTicketFromNotes(); renderNotesChecklist(); });
 </script>
 </body>
 </html>
