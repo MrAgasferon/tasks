@@ -71,6 +71,12 @@
   .tag-field-row input { flex: 1; }
   .modal-actions { display: flex; justify-content: space-between; margin-top: 16px; }
   .modal-actions .right { display: flex; gap: 8px; }
+  .modal-actions .left { display: flex; gap: 8px; }
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .subtask-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); cursor: pointer; }
+  .subtask-row .subtask-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subtask-row .subtask-status { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
   .tagpicker-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 6px; min-height: 24px; }
   .tagpicker-chip { display: flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 5px; font-size: 12px; color: #1b1e24; font-weight: 600; }
@@ -185,8 +191,16 @@
     </div>
     <div class="field"><label>№ заявки <span style="opacity:.6">(из примечаний)</span></label><input id="f_ticket" readonly></div>
 
+    <div class="field" id="subtaskSection" style="display:none">
+      <label id="subtaskLabel">Подзадачи</label>
+      <div id="subtaskList" class="subtask-list"></div>
+    </div>
+
     <div class="modal-actions">
-      <button class="secondary" id="deleteBtn" onclick="deleteCurrent()">Удалить</button>
+      <div class="left">
+        <button class="secondary" id="deleteBtn" onclick="deleteCurrent()">Удалить</button>
+        <button class="secondary" id="addSubtaskBtn" onclick="createSubtask()" style="display:none">+ Подзадача</button>
+      </div>
       <div class="right">
         <button class="secondary" onclick="closeModal()">Отмена</button>
         <button onclick="save()">Сохранить</button>
@@ -197,7 +211,7 @@
 
 <script>
 /* ================== настройки — те же, что в index.html =================== */
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
+const CLIENT_ID = 'ВСТАВЬ_СЮДА_СВОЙ_CLIENT_ID.apps.googleusercontent.com';
 const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
 /* ============================================================================ */
 
@@ -205,7 +219,7 @@ const TASKS_SHEET = 'Tasks';
 const TAGS_SHEET = 'Tags';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
 const COLUMNS = ['id', 'Задача', 'Статус', 'Проект', 'Подпроект', 'Приоритет',
-                 'Дата закрытия', 'Создано', 'Примечания', '№ заявки', 'Актуально'];
+                 'Дата закрытия', 'Создано', 'Примечания', '№ заявки', 'Актуально', 'Родитель'];
 const STATUSES = ['Бэклог', 'Не начато', 'Выполняется', 'На паузе', 'Заблокировано', 'Выполнено'];
 const CLOSING_STATUSES = new Set(['Выполнено', 'Заблокировано']);
 const PRIORITY_COLORS = { 'Критично': '#c25b52', 'Высокий': '#d68a2b', 'Средний': '#3f7fbf', 'Низкий': '#6b7078' };
@@ -280,17 +294,17 @@ async function ensureSheetIds() {
   }
 }
 async function fetchAllTasks() {
-  const data = await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A2:K100000')}`);
+  const data = await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A2:L100000')}`);
   const rows = data.values || [];
   return rows.map((row, i) => ({ row, rowIndex: i + 2 })).filter(({ row }) => row[0] && row[0].trim())
     .map(({ row, rowIndex }) => { const task = {}; COLUMNS.forEach((c, idx) => (task[c] = row[idx] || '')); task._row = rowIndex; return task; });
 }
 async function updateTaskRow(task) {
-  const range = `${TASKS_SHEET}!A${task._row}:K${task._row}`;
+  const range = `${TASKS_SHEET}!A${task._row}:L${task._row}`;
   await sheetsFetch(`/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
 }
 async function appendTaskRow(task) {
-  await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A:K')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, { method: 'POST', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
+  await sheetsFetch(`/values/${encodeURIComponent(TASKS_SHEET + '!A:L')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, { method: 'POST', body: JSON.stringify({ values: [COLUMNS.map((c) => task[c] || '')] }) });
 }
 async function deleteTaskRow(rowIndex) {
   await sheetsFetch(':batchUpdate', { method: 'POST', body: JSON.stringify({ requests: [{ deleteDimension: { range: { sheetId: tasksSheetId, dimension: 'ROWS', startIndex: rowIndex - 1, endIndex: rowIndex } } }] }) });
@@ -476,23 +490,32 @@ async function addTagInline(category, prefix) {
 /* ---------------- модалка карточки ---------------- */
 function touchRelevant() { document.getElementById('f_relevant').value = todayISO(); }
 
-function openModal(rowIndex) {
+let newTaskParent = null; // id родителя, если открыли форму создания через "+ Подзадача"
+
+function openModal(rowIndex, parentId) {
   editingRow = rowIndex || null;
+  newTaskParent = (!editingRow && parentId) ? parentId : null;
   const t = editingRow ? tasks.find((x) => x._row === editingRow) : {};
+  const parentForNew = newTaskParent ? tasks.find((x) => x.id === newTaskParent) : null;
   const weekDates = getWeekDates(weekOffset);
   newTaskDefaultDate = isoFromDate(weekDates[currentDayIndex]);
 
-  document.getElementById('modalTitle').textContent = editingRow ? 'Задача' : 'Новая задача';
+  document.getElementById('modalTitle').textContent = editingRow ? 'Задача' : (newTaskParent ? 'Новая подзадача' : 'Новая задача');
   document.getElementById('deleteBtn').style.display = editingRow ? 'inline-block' : 'none';
 
   document.getElementById('f_task').value = t.Задача || '';
   document.getElementById('f_status').value = t.Статус || STATUSES[1];
-  selectedTags['Проект'] = splitTags(t.Проект);
-  selectedTags['Подпроект'] = splitTags(t.Подпроект);
+  if (!editingRow && parentForNew) {
+    selectedTags['Проект'] = splitTags(parentForNew.Проект);
+    selectedTags['Подпроект'] = splitTags(parentForNew.Подпроект);
+  } else {
+    selectedTags['Проект'] = splitTags(t.Проект);
+    selectedTags['Подпроект'] = splitTags(t.Подпроект);
+  }
   renderTagPicker('Проект', 'tp_process');
   renderTagPicker('Подпроект', 'tp_subprocess');
   document.getElementById('f_type').innerHTML = ['Критично', 'Высокий', 'Средний', 'Низкий'].map((p) => `<option>${p}</option>`).join('');
-  document.getElementById('f_type').value = t.Приоритет || 'Средний';
+  document.getElementById('f_type').value = t.Приоритет || (parentForNew ? parentForNew.Приоритет : '') || 'Средний';
   document.getElementById('f_due').value = toISO(t['Дата закрытия']);
   document.getElementById('f_relevant').value = editingRow ? toISO(t.Актуально) : newTaskDefaultDate;
   document.getElementById('f_notes').value = t.Примечания || '';
@@ -502,9 +525,71 @@ function openModal(rowIndex) {
   document.getElementById('datesRow').style.display = editingRow ? 'flex' : 'none';
   document.getElementById('f_created').value = t.Создано || '';
 
+  renderSubtaskSection(t, editingRow, parentForNew);
+
   document.getElementById('modalBg').classList.add('open');
 }
-function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+function closeModal() { document.getElementById('modalBg').classList.remove('open'); newTaskParent = null; }
+
+function openTaskById(id) {
+  const t = tasks.find((x) => x.id === id);
+  if (!t) return;
+  openModal(t._row);
+}
+
+function subtaskRowHtml(task) {
+  return `<div class="subtask-row" onclick="openTaskById('${task.id}')">
+    <span class="subtask-text">${escapeHtml(task.Задача || '(без названия)')}</span>
+    <span class="subtask-status">${escapeHtml(task.Статус || '')}</span>
+  </div>`;
+}
+
+function renderSubtaskSection(t, editingRow, parentForNew) {
+  const section = document.getElementById('subtaskSection');
+  const label = document.getElementById('subtaskLabel');
+  const list = document.getElementById('subtaskList');
+  const addBtn = document.getElementById('addSubtaskBtn');
+
+  if (!editingRow) {
+    addBtn.style.display = 'none';
+    if (parentForNew) {
+      section.style.display = 'block';
+      label.textContent = 'Родительская задача';
+      list.innerHTML = subtaskRowHtml(parentForNew);
+    } else {
+      section.style.display = 'none';
+    }
+    return;
+  }
+
+  const parent = t.Родитель ? tasks.find((x) => x.id === t.Родитель) : null;
+  const children = tasks.filter((x) => x.Родитель === t.id);
+
+  if (parent) {
+    section.style.display = 'block';
+    label.textContent = 'Родительская задача';
+    list.innerHTML = subtaskRowHtml(parent);
+    addBtn.style.display = 'none';
+  } else {
+    addBtn.style.display = 'inline-block';
+    if (children.length) {
+      section.style.display = 'block';
+      label.textContent = `Подзадачи (${children.length})`;
+      list.innerHTML = children.map(subtaskRowHtml).join('');
+    } else {
+      section.style.display = 'none';
+    }
+  }
+}
+
+function createSubtask() {
+  if (!editingRow) return;
+  const current = tasks.find((x) => x._row === editingRow);
+  if (!current) return;
+  const parentId = current.id;
+  closeModal();
+  openModal(null, parentId);
+}
 
 async function save() {
   const btn = document.querySelector('#modalBg .modal-actions .right button:last-child');
@@ -531,10 +616,11 @@ async function save() {
     } else {
       const today = toRuFromDate(new Date());
       if (CLOSING_STATUSES.has(patch['Статус']) && !patch['Дата закрытия']) patch['Дата закрытия'] = today;
-      const task = { id: nextId(), 'Создано': today, ...patch };
+      const task = { id: nextId(), 'Создано': today, 'Родитель': newTaskParent || '', ...patch };
       if (!task['Актуально']) task['Актуально'] = newTaskDefaultDate ? toRu(newTaskDefaultDate) : today;
       await appendTaskRow(task);
     }
+    newTaskParent = null;
     closeModal();
     await reload();
   } catch (e) {
