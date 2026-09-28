@@ -55,6 +55,12 @@
   .task-row .meta { display: flex; flex-wrap: wrap; gap: 5px; font-size: 10.5px; color: var(--muted); }
   .tag-chip { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; color: #1b1e24; font-weight: 600; }
   .empty-note { color: var(--muted); font-size: 13px; padding: 10px 0; text-align: center; }
+  .subtask-badge { font-size: 10.5px; color: var(--muted); margin-top: 2px; }
+  .subtask-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+  .subtask-row { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 8px 10px;
+    border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); cursor: pointer; }
+  .subtask-row .subtask-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .subtask-row .subtask-status { font-size: 11px; color: var(--muted); white-space: nowrap; }
 
   .gate-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 90vh; gap: 14px; padding: 0 24px; text-align: center; }
   .gate-screen h1 { color: var(--accent); font-size: 20px; margin: 0; }
@@ -138,6 +144,10 @@
     <div class="view-field"><label>Создано</label><div class="value" id="v_created"></div></div>
     <div class="view-field"><label>Примечания</label><div class="value" id="v_notes"></div></div>
     <div class="view-field"><label>№ заявки</label><div class="value" id="v_ticket"></div></div>
+    <div class="view-field" id="subtaskSection" style="display:none">
+      <label id="subtaskLabel">Подзадачи</label>
+      <div id="subtaskList" class="subtask-list"></div>
+    </div>
     <div class="modal-close"><button class="secondary" onclick="closeModal()">Закрыть</button></div>
   </div>
 </div>
@@ -265,18 +275,18 @@ function render() {
 
   const sorted = [...completed].sort((a, b) => (parseDate(a['Дата закрытия']) || 0) - (parseDate(b['Дата закрытия']) || 0));
   document.getElementById('tasksList').innerHTML = sorted.length
-    ? sorted.map((t, i) => {
+    ? sorted.map((t) => {
         const days = daysBetween(parseDate(t.Создано), parseDate(t['Дата закрытия']));
         const tagsHtml = splitTags(t.Проект).concat(splitTags(t.Подпроект)).map((v) => `<span class="tag-chip" style="background:${tagColor(v)}">${escapeHtml(v)}</span>`).join('');
         const prioHtml = t.Приоритет ? `<span class="tag-chip" style="background:${PRIORITY_COLORS[t.Приоритет] || '#6b7078'}">${escapeHtml(t.Приоритет)}</span>` : '';
-        return `<div class="task-row" onclick="viewTask(${sorted.indexOf(t)})">
+        const subtaskBadge = subtaskBadgeText(t);
+        return `<div class="task-row" onclick="viewTaskById('${t.id}')">
           <div class="title">${escapeHtml(t.Задача)}</div>
+          ${subtaskBadge ? `<div class="subtask-badge">${subtaskBadge}</div>` : ''}
           <div class="meta">${t['Дата закрытия']} · ${days ?? '—'} дн. ${tagsHtml} ${prioHtml}</div>
         </div>`;
       }).join('')
     : '<div class="empty-note">за эту неделю ничего не выполнено</div>';
-
-  window._sortedCompleted = sorted;
 }
 
 /* ---------------- просмотр задачи (только чтение) ---------------- */
@@ -288,8 +298,8 @@ function renderNotesReadonly(text) {
   }).join('\n');
 }
 
-function viewTask(idx) {
-  const t = window._sortedCompleted[idx];
+function viewTaskById(id) {
+  const t = allTasks.find((x) => x.id === id);
   if (!t) return;
   document.getElementById('v_task').textContent = t.Задача || '';
   document.getElementById('v_status').textContent = t.Статус || '';
@@ -304,9 +314,49 @@ function viewTask(idx) {
   if (t.Примечания) { notesEl.innerHTML = renderNotesReadonly(t.Примечания); notesEl.classList.remove('empty'); }
   else { notesEl.textContent = 'нет'; notesEl.classList.add('empty'); }
   document.getElementById('v_ticket').textContent = t['№ заявки'] || '—';
+  renderSubtaskSection(t);
   document.getElementById('modalBg').classList.add('open');
 }
 function closeModal() { document.getElementById('modalBg').classList.remove('open'); }
+
+function subtaskRowHtml(task) {
+  return `<div class="subtask-row" onclick="viewTaskById('${task.id}')">
+    <span class="subtask-text">${escapeHtml(task.Задача || '(без названия)')}</span>
+    <span class="subtask-status">${escapeHtml(task.Статус || '')}</span>
+  </div>`;
+}
+
+function subtaskBadgeText(t) {
+  if (t.Родитель) {
+    const parent = allTasks.find((x) => x.id === t.Родитель);
+    return parent ? `↳ часть: ${escapeHtml(parent.Задача || '')}` : '';
+  }
+  const children = allTasks.filter((x) => x.Родитель === t.id);
+  if (!children.length) return '';
+  const closedCount = children.filter((c) => c.Статус === 'Выполнено' || c.Статус === 'Заблокировано').length;
+  return `${children.length} подзадач (${closedCount} закрыто)`;
+}
+
+function renderSubtaskSection(t) {
+  const section = document.getElementById('subtaskSection');
+  const label = document.getElementById('subtaskLabel');
+  const list = document.getElementById('subtaskList');
+
+  const parent = t.Родитель ? allTasks.find((x) => x.id === t.Родитель) : null;
+  const children = allTasks.filter((x) => x.Родитель === t.id);
+
+  if (parent) {
+    section.style.display = 'block';
+    label.textContent = 'Родительская задача';
+    list.innerHTML = subtaskRowHtml(parent);
+  } else if (children.length) {
+    section.style.display = 'block';
+    label.textContent = `Подзадачи (${children.length})`;
+    list.innerHTML = children.map(subtaskRowHtml).join('');
+  } else {
+    section.style.display = 'none';
+  }
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && document.getElementById('modalBg').classList.contains('open')) closeModal();
