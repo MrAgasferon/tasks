@@ -103,6 +103,7 @@
   .notes-check-row input { margin-top: 2px; width: auto; padding: 0; }
   .notes-check-row .struck { text-decoration: line-through; opacity: 0.55; }
 </style>
+<script src="config.js"></script>
 <script src="theme.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -231,8 +232,7 @@
 </div>
 
 <script>
-const CLIENT_ID = '860036772305-s13ngs4ul5fpgktgjtn7gtis3n1vlncm.apps.googleusercontent.com';
-const SPREADSHEET_ID = '1cqLOXudO1Dsq7ed26GezVA55LVMfjK7luaIXPuqjekw';
+/* CLIENT_ID и SPREADSHEET_ID — в config.js, один на все страницы */
 const TASKS_SHEET = 'Tasks';
 const TAGS_SHEET = 'Tags';
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';

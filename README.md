@@ -187,7 +187,8 @@ Google Таблица; вокруг неё построены три незав�
 | `index.html` | Мобильная доска |
 | `analytics.html` | Мобильная аналитика (только просмотр/редактирование существующих задач) |
 | `planning.html` | Мобильное недельное планирование |
-| `report.html` | Публичный зашифрованный отчёт — не требует входа в Google |
+| `config.js` | `CLIENT_ID` и `SPREADSHEET_ID` — общие для `index.html`/`analytics.html`/`planning.html`, правятся в одном месте |
+| `report.html` | Публичный зашифрованный отчёт — не требует входа в Google, `config.js` не подключает (вход через Google ему не нужен) |
 | `report-data.json` | Зашифрованный снапшот (заливается автоматически или кнопкой «Опубликовать») |
 | `manifest.json` | Манифест PWA (иконка, имя приложения) |
 | `sw.js` | Service worker — кэширует статику для быстрого запуска |
@@ -202,8 +203,9 @@ Google Таблица; вокруг неё построены три незав�
 3. **OAuth Client ID** (для мобильной версии): Google Auth Platform → Audience
    → добавить себя в Test users → Clients → создать Web application клиент →
    Authorized JavaScript origins = `https://<username>.github.io` (без пути и
-   слеша в конце). Вписать полученный Client ID в `CLIENT_ID` в начале каждого
-   мобильного HTML-файла (`index.html`, `analytics.html`, `planning.html`).
+   слеша в конце). Вписать полученный Client ID и `SPREADSHEET_ID` в
+   `mobile/config.js` — один файл на все мобильные страницы, руками по
+   `index.html`/`analytics.html`/`planning.html` править не нужно.
 4. **GitHub репозиторий**: публичный, файлы мобильной версии — в корне.
    Settings → Pages → Deploy from branch → `main` / `/(root)`.
 5. **GitHub-токен** (опционально, для автопубликации отчёта): Fine-grained
