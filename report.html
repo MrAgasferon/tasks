@@ -243,7 +243,7 @@ function render() {
 
   const completed = allTasks.filter((t) => t.Статус === 'Выполнено' && inRange(parseDate(t['Дата закрытия']), monday, sunday));
   const created = allTasks.filter((t) => inRange(parseDate(t.Создано), monday, sunday));
-  const withTicket = created.filter((t) => t['№ заявки'] && t['№ заявки'].trim()).length;
+  const withTicket = completed.filter((t) => t['№ заявки'] && t['№ заявки'].trim()).length;
   const lifetimes = completed.map((t) => daysBetween(parseDate(t.Создано), parseDate(t['Дата закрытия']))).filter((d) => d !== null);
   const avgLifetime = lifetimes.length ? Math.round(lifetimes.reduce((a, b) => a + b, 0) / lifetimes.length) : null;
 
